@@ -12,9 +12,11 @@ def is_hts_code_eligible(code):
     return not any(code.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
 
 def calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage):
-    total_cost = (units_per_po * num_pos_per_year * avg_cost_per_unit) + (freight_cost_per_po * num_pos_per_year)
-    savings = total_cost * (hts_code_percentage / 100)
-    return savings, total_cost
+    total_cost_per_po = (units_per_po * avg_cost_per_unit) + freight_cost_per_po
+    total_cost_annual = total_cost_per_po * num_pos_per_year
+    duties_per_po = total_cost_per_po * (hts_code_percentage / 100)
+    duties_annual = duties_per_po * num_pos_per_year
+    return duties_per_po, duties_annual, total_cost_per_po, total_cost_annual
 
 st.title("Section 321 Savings Calculator")
 
@@ -41,7 +43,9 @@ if st.button("Calculate Savings"):
         eligible = is_hts_code_eligible(hts_code)
         hts_code_percentage = 0 if eligible else 25  # Assuming 25% for ineligible codes, 0% for eligible
 
-        savings, total_cost = calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage)
+        duties_per_po, duties_annual, total_cost_per_po, total_cost_annual = calculate_savings(
+            units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage
+        )
 
         st.subheader("HTS Code Eligibility:")
         if eligible:
@@ -50,25 +54,32 @@ if st.button("Calculate Savings"):
             st.error("This HTS code is not eligible for Section 321. Additional duties may apply.")
 
         st.subheader("Cost Analysis:")
-        st.write(f"Total Cost of Goods and Freight: ${total_cost:,.2f}")
+        st.write(f"Total Cost per PO: ${total_cost_per_po:,.2f}")
+        st.write(f"Total Annual Cost: ${total_cost_annual:,.2f}")
+        
         if not eligible:
-            st.write(f"Potential Additional Duties (25%): ${savings:,.2f}")
-            st.write(f"Total Cost including Duties: ${total_cost + savings:,.2f}")
+            st.write(f"Potential Duties per PO: ${duties_per_po:,.2f}")
+            st.write(f"Potential Annual Duties: ${duties_annual:,.2f}")
+            st.write(f"Total Cost per PO including Duties: ${total_cost_per_po + duties_per_po:,.2f}")
+            st.write(f"Total Annual Cost including Duties: ${total_cost_annual + duties_annual:,.2f}")
 
-        st.subheader("Additional Insights:")
-        st.write(f"Cost per PO: ${total_cost / num_pos_per_year:,.2f}")
-        st.write(f"Cost per Unit: ${total_cost / (units_per_po * num_pos_per_year):,.2f}")
+        st.subheader("Potential Savings:")
+        st.write(f"Savings per PO: ${duties_per_po:,.2f}")
+        st.write(f"Annual Savings: ${duties_annual:,.2f}")
 
         # Create the chart
         fig = go.Figure(data=[
-            go.Bar(name='Total Cost', x=['Section 321 Eligible', 'Section 301 Duties'], 
-                   y=[total_cost, total_cost + savings],
-                   marker_color=['rgba(75, 192, 192, 0.8)', 'rgba(255, 99, 132, 0.8)'])
+            go.Bar(name='Cost without Duties', x=['Per PO', 'Annual'], 
+                   y=[total_cost_per_po, total_cost_annual],
+                   marker_color='rgba(75, 192, 192, 0.8)'),
+            go.Bar(name='Potential Duties', x=['Per PO', 'Annual'], 
+                   y=[duties_per_po, duties_annual],
+                   marker_color='rgba(255, 99, 132, 0.8)')
         ])
         fig.update_layout(
-            title='Cost Comparison: Section 321 Eligible vs. Section 301 Duties',
+            title='Cost Comparison: With and Without Section 321 Savings',
             yaxis_title='Cost ($)',
-            yaxis=dict(rangemode='tozero')
+            barmode='stack'
         )
         st.plotly_chart(fig)
     else:
