@@ -8,10 +8,11 @@ ineligible_hts_codes = [
 ]
 
 def is_hts_code_eligible(code):
-    # Remove any periods from the code
-    code_without_periods = code.replace('.', '')
-    # Check if the first 4 digits of the entered code match any in the ineligible list
-    return not any(code_without_periods.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
+    # Remove any periods and non-digit characters from the code
+    code_cleaned = re.sub(r'\D', '', code)
+    
+    # Check if any ineligible code is a prefix of the cleaned input code
+    return not any(code_cleaned.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
 
 def calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage):
     total_cost_per_po = (units_per_po * avg_cost_per_unit) + freight_cost_per_po
@@ -27,13 +28,18 @@ This calculator estimates the potential savings when using the Section 321 progr
 based on your purchase orders, costs, and HTS code.
 """)
 
-hts_code = st.text_input("HTS Code (6, 8, or 10 digits)")
+hts_code = st.text_input("HTS Code (6, 8, or 10 digits, with or without periods)")
 if hts_code:
-    eligible = is_hts_code_eligible(hts_code)
-    if eligible:
-        st.success("This HTS code is eligible for Section 321")
+    # Remove any non-digit characters for validation
+    hts_code_digits = re.sub(r'\D', '', hts_code)
+    if len(hts_code_digits) in [6, 8, 10]:
+        eligible = is_hts_code_eligible(hts_code_digits)
+        if eligible:
+            st.success("This HTS code is eligible for Section 321")
+        else:
+            st.error("This HTS code is not eligible for Section 321")
     else:
-        st.error("This HTS code is not eligible for Section 321")
+        st.error("Invalid HTS code. Please enter 6, 8, or 10 digits.")
 
 units_per_po = st.number_input("Average Number of Units in Purchase Order (PO)", min_value=1, value=1000)
 num_pos_per_year = st.number_input("Number of Purchase Orders (POs) a Year", min_value=1, value=12)
@@ -42,8 +48,8 @@ freight_cost_per_po = st.number_input("Freight Costs per PO ($)", min_value=0.0,
 hts_code_percentage = st.number_input("HTS Code %", min_value=0.0, max_value=100.0, value=25.0, step=0.1)
 
 if st.button("Calculate Savings"):
-    if hts_code:
-        eligible = is_hts_code_eligible(hts_code)
+    if hts_code and len(hts_code_digits) in [6, 8, 10]:
+        eligible = is_hts_code_eligible(hts_code_digits)
         
         duties_per_po, duties_annual, total_cost_per_po, total_cost_annual = calculate_savings(
             units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage
@@ -72,15 +78,14 @@ if st.button("Calculate Savings"):
         st.write(f"Percentage Savings: {percentage_savings:.2f}%")
 
         # Visualize savings
-        fig1 = go.Figure(data=[
+        fig = go.Figure(data=[
             go.Bar(name='Total Cost', x=['Without Section 321', 'With Section 321'], 
                    y=[total_cost_annual + duties_annual, total_cost_annual]),
             go.Bar(name='Savings', x=['Without Section 321', 'With Section 321'], 
                    y=[0, duties_annual])
         ])
-        fig1.update_layout(barmode='stack', title='Annual Cost Comparison: With and Without Section 321')
-        st.plotly_chart(fig1)
-
+        fig.update_layout(barmode='stack', title='Annual Cost Comparison: With and Without Section 321')
+        st.plotly_chart(fig)
 
         # Additional insights
         st.subheader("Additional Insights:")
@@ -98,4 +103,4 @@ if st.button("Calculate Savings"):
         else:
             st.write("No savings calculated. Please check your input values.")
     else:
-        st.warning("Please enter an HTS code to calculate savings.")
+        st.warning("Please enter a valid HTS code to calculate savings.")
