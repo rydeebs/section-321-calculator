@@ -8,14 +8,14 @@ ineligible_hts_codes = [
 ]
 
 def is_hts_code_eligible(code):
-    # Remove any non-digit characters
-    code_cleaned = ''.join(char for char in code if char.isdigit())
+    # First, check if the full code (including periods) is in the ineligible list
+    if code in ineligible_hts_codes:
+        return False
     
-    # Check if any ineligible code is a prefix of the cleaned input code
-    for ineligible_code in ineligible_hts_codes:
-        if code_cleaned.startswith(ineligible_code):
-            return False
-    return True
+    # Then, check if any ineligible prefix matches
+    code_without_periods = code.replace('.', '')
+    return not any(code_without_periods.startswith(ineligible_prefix.replace('.', '')) 
+                   for ineligible_prefix in ineligible_hts_codes)
 
 def calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage):
     total_cost_per_po = (units_per_po * avg_cost_per_unit) + freight_cost_per_po
@@ -33,10 +33,10 @@ based on your purchase orders, costs, and HTS code.
 
 hts_code = st.text_input("HTS Code (6, 8, or 10 digits, with or without periods)")
 if hts_code:
-    # Remove any non-digit characters for validation
+    # Check if the input is valid (6, 8, or 10 digits, with or without periods)
     hts_code_digits = ''.join(char for char in hts_code if char.isdigit())
     if len(hts_code_digits) in [6, 8, 10]:
-        eligible = is_hts_code_eligible(hts_code_digits)
+        eligible = is_hts_code_eligible(hts_code)
         if eligible:
             st.success("This HTS code is eligible for Section 321")
         else:
@@ -52,7 +52,7 @@ hts_code_percentage = st.number_input("HTS Code %", min_value=0.0, max_value=100
 
 if st.button("Calculate Savings"):
     if hts_code and len(hts_code_digits) in [6, 8, 10]:
-        eligible = is_hts_code_eligible(hts_code_digits)
+        eligible = is_hts_code_eligible(hts_code)
         
         duties_per_po, duties_annual, total_cost_per_po, total_cost_annual = calculate_savings(
             units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage
