@@ -8,8 +8,10 @@ ineligible_hts_codes = [
 ]
 
 def is_hts_code_eligible(code):
+    # Remove any periods from the code
+    code_without_periods = code.replace('.', '')
     # Check if the first 4 digits of the entered code match any in the ineligible list
-    return not any(code.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
+    return not any(code_without_periods.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
 
 def calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage):
     total_cost_per_po = (units_per_po * avg_cost_per_unit) + freight_cost_per_po
