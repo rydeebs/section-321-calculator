@@ -60,8 +60,6 @@ if st.button("Calculate Savings"):
         
         st.write(f"Potential Duties per PO: ${duties_per_po:,.2f}")
         st.write(f"Potential Annual Duties: ${duties_annual:,.2f}")
-        st.write(f"Total Cost per PO including Duties: ${total_cost_per_po + duties_per_po:,.2f}")
-        st.write(f"Total Annual Cost including Duties: ${total_cost_annual + duties_annual:,.2f}")
 
         st.subheader("Potential Savings:")
         st.write(f"Savings per PO: ${duties_per_po:,.2f}")
@@ -81,21 +79,6 @@ if st.button("Calculate Savings"):
         fig1.update_layout(barmode='stack', title='Annual Cost Comparison: With and Without Section 321')
         st.plotly_chart(fig1)
 
-        # Original chart
-        fig2 = go.Figure(data=[
-            go.Bar(name='Cost without Duties', x=['Per PO', 'Annual'], 
-                   y=[total_cost_per_po, total_cost_annual],
-                   marker_color='rgba(75, 192, 192, 0.8)'),
-            go.Bar(name='Potential Duties', x=['Per PO', 'Annual'], 
-                   y=[duties_per_po, duties_annual],
-                   marker_color='rgba(255, 99, 132, 0.8)')
-        ])
-        fig2.update_layout(
-            title='Cost Breakdown: With and Without Section 321 Savings',
-            yaxis_title='Cost ($)',
-            barmode='stack'
-        )
-        st.plotly_chart(fig2)
 
         # Additional insights
         st.subheader("Additional Insights:")
