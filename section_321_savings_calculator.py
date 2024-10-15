@@ -37,12 +37,12 @@ units_per_po = st.number_input("Average Number of Units in Purchase Order (PO)",
 num_pos_per_year = st.number_input("Number of Purchase Orders (POs) a Year", min_value=1, value=12)
 avg_cost_per_unit = st.number_input("Average Cost of Goods per Unit ($)", min_value=0.01, value=50.00, step=0.01)
 freight_cost_per_po = st.number_input("Freight Costs per PO ($)", min_value=0.0, value=500.00, step=0.01)
+hts_code_percentage = st.number_input("HTS Code %", min_value=0.0, max_value=100.0, value=25.0, step=0.1)
 
 if st.button("Calculate Savings"):
     if hts_code:
         eligible = is_hts_code_eligible(hts_code)
-        hts_code_percentage = 0 if eligible else 25  # Assuming 25% for ineligible codes, 0% for eligible
-
+        
         duties_per_po, duties_annual, total_cost_per_po, total_cost_annual = calculate_savings(
             units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage
         )
@@ -50,6 +50,7 @@ if st.button("Calculate Savings"):
         st.subheader("HTS Code Eligibility:")
         if eligible:
             st.success("This HTS code is eligible for Section 321. No additional duties apply.")
+            st.write("Note: Even though this HTS code is eligible, we'll still calculate potential savings based on the provided HTS Code %.")
         else:
             st.error("This HTS code is not eligible for Section 321. Additional duties may apply.")
 
@@ -57,18 +58,31 @@ if st.button("Calculate Savings"):
         st.write(f"Total Cost per PO: ${total_cost_per_po:,.2f}")
         st.write(f"Total Annual Cost: ${total_cost_annual:,.2f}")
         
-        if not eligible:
-            st.write(f"Potential Duties per PO: ${duties_per_po:,.2f}")
-            st.write(f"Potential Annual Duties: ${duties_annual:,.2f}")
-            st.write(f"Total Cost per PO including Duties: ${total_cost_per_po + duties_per_po:,.2f}")
-            st.write(f"Total Annual Cost including Duties: ${total_cost_annual + duties_annual:,.2f}")
+        st.write(f"Potential Duties per PO: ${duties_per_po:,.2f}")
+        st.write(f"Potential Annual Duties: ${duties_annual:,.2f}")
+        st.write(f"Total Cost per PO including Duties: ${total_cost_per_po + duties_per_po:,.2f}")
+        st.write(f"Total Annual Cost including Duties: ${total_cost_annual + duties_annual:,.2f}")
 
         st.subheader("Potential Savings:")
         st.write(f"Savings per PO: ${duties_per_po:,.2f}")
         st.write(f"Annual Savings: ${duties_annual:,.2f}")
 
-        # Create the chart
-        fig = go.Figure(data=[
+        # Calculate percentage savings
+        percentage_savings = (duties_annual / total_cost_annual) * 100
+        st.write(f"Percentage Savings: {percentage_savings:.2f}%")
+
+        # Visualize savings
+        fig1 = go.Figure(data=[
+            go.Bar(name='Total Cost', x=['Without Section 321', 'With Section 321'], 
+                   y=[total_cost_annual + duties_annual, total_cost_annual]),
+            go.Bar(name='Savings', x=['Without Section 321', 'With Section 321'], 
+                   y=[0, duties_annual])
+        ])
+        fig1.update_layout(barmode='stack', title='Annual Cost Comparison: With and Without Section 321')
+        st.plotly_chart(fig1)
+
+        # Original chart
+        fig2 = go.Figure(data=[
             go.Bar(name='Cost without Duties', x=['Per PO', 'Annual'], 
                    y=[total_cost_per_po, total_cost_annual],
                    marker_color='rgba(75, 192, 192, 0.8)'),
@@ -76,11 +90,27 @@ if st.button("Calculate Savings"):
                    y=[duties_per_po, duties_annual],
                    marker_color='rgba(255, 99, 132, 0.8)')
         ])
-        fig.update_layout(
-            title='Cost Comparison: With and Without Section 321 Savings',
+        fig2.update_layout(
+            title='Cost Breakdown: With and Without Section 321 Savings',
             yaxis_title='Cost ($)',
             barmode='stack'
         )
-        st.plotly_chart(fig)
+        st.plotly_chart(fig2)
+
+        # Additional insights
+        st.subheader("Additional Insights:")
+        st.write(f"Average Saving per PO: ${duties_per_po:.2f}")
+        st.write(f"Average Saving per Unit: ${duties_annual / (units_per_po * num_pos_per_year):.2f}")
+
+        # Breakeven analysis
+        if duties_annual > 0:
+            breakeven_pos = freight_cost_per_po / (units_per_po * avg_cost_per_unit * (hts_code_percentage / 100))
+            st.write(f"Breakeven Point: {breakeven_pos:.2f} Purchase Orders")
+            if breakeven_pos < num_pos_per_year:
+                st.write("You're above the breakeven point, Section 321 is beneficial.")
+            else:
+                st.write("You're below the breakeven point, but Section 321 can still provide savings.")
+        else:
+            st.write("No savings calculated. Please check your input values.")
     else:
         st.warning("Please enter an HTS code to calculate savings.")
