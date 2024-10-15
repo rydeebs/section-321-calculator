@@ -8,14 +8,15 @@ ineligible_hts_codes = [
 ]
 
 def is_hts_code_eligible(code):
-    # First, check if the full code (including periods) is in the ineligible list
-    if code in ineligible_hts_codes:
-        return False
+    # Remove any non-digit characters
+    code_cleaned = ''.join(char for char in code if char.isdigit())
     
-    # Then, check if any ineligible prefix matches
-    code_without_periods = code.replace('.', '')
-    return not any(code_without_periods.startswith(ineligible_prefix.replace('.', '')) 
-                   for ineligible_prefix in ineligible_hts_codes)
+    # Check if any ineligible code is a prefix of the cleaned input code
+    for ineligible_code in ineligible_hts_codes:
+        ineligible_cleaned = ''.join(char for char in ineligible_code if char.isdigit())
+        if code_cleaned.startswith(ineligible_cleaned):
+            return False
+    return True
 
 def calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage):
     total_cost_per_po = (units_per_po * avg_cost_per_unit) + freight_cost_per_po
@@ -31,18 +32,18 @@ This calculator estimates the potential savings when using the Section 321 progr
 based on your purchase orders, costs, and HTS code.
 """)
 
-hts_code = st.text_input("HTS Code (6, 8, or 10 digits, with or without periods)")
+hts_code = st.text_input("HTS Code (with or without periods)")
 if hts_code:
-    # Check if the input is valid (6, 8, or 10 digits, with or without periods)
+    # Remove any non-digit characters for validation
     hts_code_digits = ''.join(char for char in hts_code if char.isdigit())
-    if len(hts_code_digits) in [6, 8, 10]:
+    if len(hts_code_digits) >= 4:
         eligible = is_hts_code_eligible(hts_code)
         if eligible:
             st.success("This HTS code is eligible for Section 321")
         else:
             st.error("This HTS code is not eligible for Section 321")
     else:
-        st.error("Invalid HTS code. Please enter 6, 8, or 10 digits.")
+        st.error("Invalid HTS code. Please enter at least 4 digits.")
 
 units_per_po = st.number_input("Average Number of Units in Purchase Order (PO)", min_value=1, value=1000)
 num_pos_per_year = st.number_input("Number of Purchase Orders (POs) a Year", min_value=1, value=12)
@@ -51,7 +52,7 @@ freight_cost_per_po = st.number_input("Freight Costs per PO ($)", min_value=0.0,
 hts_code_percentage = st.number_input("HTS Code %", min_value=0.0, max_value=100.0, value=25.0, step=0.1)
 
 if st.button("Calculate Savings"):
-    if hts_code and len(hts_code_digits) in [6, 8, 10]:
+    if hts_code and len(hts_code_digits) >= 4:
         eligible = is_hts_code_eligible(hts_code)
         
         duties_per_po, duties_annual, total_cost_per_po, total_cost_annual = calculate_savings(
