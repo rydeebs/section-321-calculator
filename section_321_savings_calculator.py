@@ -8,8 +8,8 @@ ineligible_hts_codes = [
 ]
 
 def is_hts_code_eligible(code):
-    # Remove any periods and non-digit characters from the code
-    code_cleaned = re.sub(r'\D', '', code)
+    # Remove any non-digit characters
+    code_cleaned = ''.join(char for char in code if char.isdigit())
     
     # Check if any ineligible code is a prefix of the cleaned input code
     return not any(code_cleaned.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
@@ -31,7 +31,7 @@ based on your purchase orders, costs, and HTS code.
 hts_code = st.text_input("HTS Code (6, 8, or 10 digits, with or without periods)")
 if hts_code:
     # Remove any non-digit characters for validation
-    hts_code_digits = re.sub(r'\D', '', hts_code)
+    hts_code_digits = ''.join(char for char in hts_code if char.isdigit())
     if len(hts_code_digits) in [6, 8, 10]:
         eligible = is_hts_code_eligible(hts_code_digits)
         if eligible:
