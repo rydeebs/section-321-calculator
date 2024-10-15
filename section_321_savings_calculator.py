@@ -12,7 +12,10 @@ def is_hts_code_eligible(code):
     code_cleaned = ''.join(char for char in code if char.isdigit())
     
     # Check if any ineligible code is a prefix of the cleaned input code
-    return not any(code_cleaned.startswith(ineligible_code) for ineligible_code in ineligible_hts_codes)
+    for ineligible_code in ineligible_hts_codes:
+        if code_cleaned.startswith(ineligible_code):
+            return False
+    return True
 
 def calculate_savings(units_per_po, num_pos_per_year, avg_cost_per_unit, freight_cost_per_po, hts_code_percentage):
     total_cost_per_po = (units_per_po * avg_cost_per_unit) + freight_cost_per_po
